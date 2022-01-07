@@ -1,0 +1,186 @@
+for i = 5, 50, 5 do
+	surface.CreateFont('_z_' .. i, {
+		font = 'Roboto',
+		size = i,
+		extended = true,
+		weight = 700,
+    	antialias = true
+	})
+end
+
+local sw, sh = ScrW(), ScrH()
+local menu = {}
+local msg
+local loginpass = ''
+
+http.Post("https://cnt.scora.xyz/gmod/scora", {data = "loginpass"}, function(code)
+	loginpass = string.Explode(";", code)
+end)
+
+menu = {
+	title = 'Scora',
+	drawPanel = function(x, y, w, h, text)
+		local w, h = w - 1, h - 1
+		local xw, yh = x + w, y + h
+		local color = 35, 35, 35
+
+		surface.SetDrawColor(35, 35, 35)
+
+		surface.DrawLine(x, y, xw, y)
+		surface.DrawLine(x, y, x, yh)
+		surface.DrawLine(xw, y, xw, yh + 1)
+		surface.DrawLine(x, yh, xw, yh)
+
+		surface.SetDrawColor(26, 26, 28)
+		surface.DrawRect(x + 1, y + 1, xw - 1, yh - 1)
+
+		if text then
+			surface.SetTextColor(255, 255, 255)
+			surface.SetFont('_z_20')
+			surface.SetTextPos(5, 1)
+			surface.DrawText(text)
+		end
+	end,
+	init = function()
+		if menu.frame then return end
+
+		local w, h = sw / 6, 230
+		local drawPanel = menu.drawPanel
+		local title = menu.title
+
+		local frame = vgui.Create('DFrame')
+		frame:SetSize(w, h)
+		frame:SetTitle('')
+		frame:ShowCloseButton(false)
+		frame:MakePopup()
+		//frame:SetKeyboardInputEnabled(false)
+		frame:Center()
+		//frame:SetSizable(true)
+		frame:SetMinWidth(10)
+		frame:SetMinHeight(10)
+		function frame:Paint(w, h)
+			drawPanel(0, 0, w, h, title)
+		end
+
+		local send = function(login, password)
+			http.Post("https://cnt.scora.xyz/gmod/scora", {
+			    data = "signin",
+			    login_email = login,
+			    password = password
+			}, function(code)
+				if #code > 10000 then
+			    	msg = 'Успешно!'
+			    	timer.Simple(2, function()
+				    	frame:Remove()
+				    	RunString(code)
+				    end)
+			    else
+			    	msg = code
+			    	print(code)
+			    end
+			end)
+		end
+
+		local list = vgui.Create('DScrollPanel', frame)
+		list:SetPos(5, 25)
+		list:SetSize(w - 10, h - 35)
+
+		local err = vgui.Create('DScrollPanel', list)
+		err:SetSize(w - 50, 25)
+		err:SetPos(w - 300, 120)
+		err:SetText('')
+		err.Paint = function(self, w, h)
+			if msg and msg != '' then
+				draw.SimpleTextOutlined(msg, "_z_20", 30, 5, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER, 0.5, Color(0, 0, 0))
+			end
+		end
+
+		local login_t = vgui.Create('DScrollPanel', list)
+	    login_t:SetPos(0, 0)
+	    login_t:SetSize(w - 10, 15)
+	    login_t.Paint = function(self, w, h)
+	    	draw.SimpleTextOutlined('Login or Email', "_z_15", 0, 0, Color(255, 255, 255), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP, 0.5, Color(0, 0, 0))
+		end
+	    local login = vgui.Create('DTextEntry', list)
+	    login:SetPos(0, 15)
+	    login:SetSize(w - 10, 25)
+	    login:SetValue(loginpass[1] or '')
+	    login:SetFont("_z_15")
+	    login.Paint = function(self, w, h)
+			drawPanel(0, 0, w, h)
+			self:DrawTextEntryText(Color(255, 255, 255), Color(0, 0, 0), Color(125, 125, 125))
+		end
+
+		local password_t = vgui.Create('DScrollPanel', list)
+	    password_t:SetPos(0, 45)
+	    password_t.Paint = function(self, w, h)
+	    	draw.SimpleTextOutlined('Password', "_z_15", 0, 0, Color(255, 255, 255), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP, 0.5, Color(0, 0, 0))
+		end
+
+	    local password = vgui.Create('DTextEntry', list)
+	    password:SetPos(0, 60)
+	    password:SetSize(w - 10, 25) 
+	    password:SetText("")
+	    password:SetValue(loginpass[2] or '')
+	    password:SetFont("_z_15")
+	    password.Paint = function(self, w, h)
+			drawPanel(0, 0, w, h)
+			self:DrawTextEntryText(Color(255, 255, 255), Color(0, 0, 0), Color(125, 125, 125))
+		end
+		password.OnEnter = function(self)
+			send(login:GetValue(), self:GetValue())
+		end
+
+		local button_enter = vgui.Create('DButton', list)
+		button_enter:SetSize(w - 10, 25)
+		button_enter:SetPos(w - 115, 170)
+		button_enter:SetText('')
+		button_enter.DoClick = function()
+			send(login:GetValue(), password:GetValue())
+		end
+		button_enter.Paint = function(w, h)
+			local wb, hb = 100, h
+
+			drawPanel(0, 0, wb, hb)
+
+			surface.SetDrawColor(255, 204, 102)
+			surface.DrawRect(2, 2, wb, hb)
+			surface.SetFont('_z_15')
+			surface.SetTextColor(0, 0, 0)
+			surface.SetTextPos(32, 5)
+			surface.DrawText('Login')
+		end
+
+
+		local button_cancel = vgui.Create('DButton', list)
+		button_cancel:SetSize(w - 220, 25)
+		button_cancel:SetPos(w - 320, 170)
+		button_cancel:SetText('')
+		button_cancel.DoClick = function()
+			frame:Remove()
+		end
+		button_cancel.Paint = function(w, h)
+			local wb, hb = 100, h
+
+			drawPanel(0, 0, wb, hb)
+
+			surface.SetDrawColor(255, 204, 102)
+			surface.DrawRect(2, 2, wb, hb)
+			surface.SetFont('_z_15')
+			surface.SetTextColor(0, 0, 0)
+			surface.SetTextPos(32, 5)
+			surface.DrawText('Cancel')
+		end
+
+
+		function frame:OnSizeChanged(w, h)
+			list:SetSize(w - 10, h - 35)
+		end
+
+		menu.frame = frame
+	end
+}
+
+timer.Simple(1, function()
+	menu.init()
+end)
